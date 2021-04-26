@@ -1,4 +1,3 @@
-# Import Packages
 import re
 
 # import sys
@@ -10,13 +9,13 @@ import pandas as pd
 import qgrid
 
 # import seaborn and set display properties
-import seaborn as sns
+# import seaborn as sns
 from lmfit import Minimizer, Parameters
 from matplotlib import gridspec
 
-sns.set_style("whitegrid")
-sns.set_style("ticks")
-sns.set_context("poster")
+# sns.set_style("whitegrid")
+# sns.set_style("ticks")
+# sns.set_context("poster")
 from .hapi import (
     ISO,
     PYTIPS2017,
@@ -34,10 +33,10 @@ def HTP_from_DF_select(
     wing_method="wing_cutoff",
     p=1,
     T=296,
-    molefraction={},
+    molefraction=None,  # {},
     natural_abundance=True,
-    abundance_ratio_MI={},
-    Diluent={},
+    abundance_ratio_MI=None,  # {},
+    Diluent=None,  # {},
     diluent="air",
     IntensityThreshold=1e-30,
 ):
@@ -130,6 +129,15 @@ def HTP_from_DF_select(
 
 
     """
+
+    # Better Defaults
+    if molefraction is None:
+        molefraction = {}
+    if abundance_ratio_MI is None:
+        abundance_ratio_MI = {}
+    if Diluent is None:
+        Diluent = {diluent: 1.0}
+
     # Generate X-axis for simulation
     wavenumbers = waves
 
@@ -143,8 +151,8 @@ def HTP_from_DF_select(
     mol_dens = (p / 9.869233e-7) / (1.380648813e-16 * T)
 
     # Sets-up the  Diluent (currently limited to air or self, unless manual input in Diluent)
-    if not Diluent:
-        Diluent = {diluent: 1.0}
+    # if not Diluent:
+    #     Diluent = {diluent: 1.0}
 
     # Calculate line intensity
     linelist["SigmaT"] = 0
@@ -329,11 +337,11 @@ class Spectrum:
     def __init__(
         self,
         filename,
-        molefraction={},
+        molefraction=None,
         natural_abundance=True,
         diluent="air",
-        Diluent={},
-        abundance_ratio_MI={},
+        Diluent=None,
+        abundance_ratio_MI=None,
         spectrum_number=1,
         input_freq=True,
         input_tau=True,
@@ -343,22 +351,34 @@ class Spectrum:
         tau_column="Mean tau/us",
         tau_stats_column=None,
         segment_column=None,
-        etalons={},
+        etalons=None,
         nominal_temperature=296,
         x_shift=0,
         baseline_order=1,
     ):
+
+        # Better handling of defaults
+        if molefraction is None:
+            molefraction = {}
+        if Diluent is None:
+            Diluent = {diluent: 1}
+        if abundance_ratio_MI is None:
+            abundance_ratio_MI = {}
+        if etalons is None:
+            etalons = {}
+
         self.filename = filename
         self.molefraction = molefraction
         self.natural_abundance = natural_abundance
         self.abundance_ratio_MI = abundance_ratio_MI
         self.diluent = diluent
-        if (
-            Diluent == {}
-        ):  # if Diluent was not set as the dictionary of various broadeners, then define dictionary with all of the broadening contribution coming from the diluent broadener
-            self.Diluent = {self.diluent: 1}
-        else:
-            self.Diluent = Diluent
+        # if (
+        #     Diluent == {}
+        # ):  # if Diluent was not set as the dictionary of various broadeners, then define dictionary with all of the broadening contribution coming from the diluent broadener
+        #     self.Diluent = {self.diluent: 1}
+        # else:
+        #     self.Diluent = Diluent
+        self.Diluent = Diluent
         self.spectrum_number = spectrum_number
         self.pressure_column = pressure_column
         self.temperature_column = temperature_column
@@ -1083,23 +1103,23 @@ def simulate_spectrum(
     wave_space,
     wave_error=0,
     SNR=None,
-    baseline_terms=[0],
+    baseline_terms=None,  # [0],
     temperature=25,
-    temperature_err={"bias": 0, "function": None, "params": {}},
+    temperature_err=None,  # {"bias": 0, "function": None, "params": {}},
     pressure=760,
-    pressure_err={"per_bias": 0, "function": None, "params": {}},
+    pressure_err=None,  # {"per_bias": 0, "function": None, "params": {}},
     wing_cutoff=25,
     wing_wavenumbers=25,
     wing_method="wing_cutoff",
     filename="temp",
-    molefraction={},
-    molefraction_err={},
+    molefraction=None,  # {},
+    molefraction_err=None,  # {},
     natural_abundance=True,
-    abundance_ratio_MI={},
+    abundance_ratio_MI=None,  # {},
     diluent="air",
-    Diluent={},
+    Diluent=None,  # {},
     nominal_temperature=296,
-    etalons={},
+    etalons=None,  # {},
     x_shift=0,
     IntensityThreshold=1e-30,
     num_segments=10,
@@ -1142,7 +1162,8 @@ def simulate_spectrum(
     molefraction : dict, optional
         mole fraction of each molecule to be simulated in the spectrum in the format {molec_id: mole fraction (out of 1), molec_id: molefraction, . . . }. The default is {}.
     molefraction_err : dict, optional
-        percent error in the mole fraction of each molecule to be simulated in the spectrum in the format {molec_id: percent error in mole fraction, molec_id: percent error in mole fraction, . . . }. The default is {}.
+        percent error in the mole
+    fraction of each molecule to be simulated in the spectrum in the format {molec_id: percent error in mole fraction, molec_id: percent error in mole fraction, . . . }. The default is {}.
     natural_abundance : bool, optional
         flag for if the spectrum contains data at natural abundance. The default is True.
     abundance_ratio_MI : dict, optional
@@ -1170,10 +1191,31 @@ def simulate_spectrum(
         Outputs a Spectrum class object. This makes it so the you can easily switch between reading in an experimental spectrum and simulated a synthetic spectrum by simply switching out whether the spectrum object is defined through the class definition or through the simulate_spectrum function.
 
     """
-    # Checks to make a Diluent dictionary has been assigned
-    if not Diluent:
+
+    # Setting default values:
+    if baseline_terms is None:
+        baseline_terms = [0]
+    if temperature_err is None:
+        temperature_err = {"bias": 0, "function": None, "params": {}}
+    if pressure_err is None:
+        pressure_err = {"per_bias": 0, "function": None, "params": {}}
+    if molefraction is None:
+        molefraction = {}
+    if molefraction_err is None:
+        molefraction_err = {}
+    if abundance_ratio_MI is None:
+        abundance_ratio_MI = {}
+    if Diluent is None:
         Diluent = {diluent: 1.0}
+    if etalons is None:
+        etalons = {}
+
+    # Checks to make a Diluent dictionary has been assigned
     # Generates a linemixing column for each Diluent
+    # NOTE: This seems bad practice.
+    # You're modifying (adding columns to) the input dataframe
+    # I'm not sure, but this could lead to some odd side effects
+
     for dil in Diluent:
         parameter_linelist["y_" + dil] = parameter_linelist[
             "y_" + dil + "_" + str(nominal_temperature)
@@ -1432,20 +1474,20 @@ class Generate_FitParam_File:
 
     def generate_fit_param_linelist_from_linelist(
         self,
-        vary_nu={},
-        vary_sw={},
-        vary_gamma0={},
-        vary_n_gamma0={},
-        vary_delta0={},
-        vary_n_delta0={},
-        vary_aw={},
-        vary_n_gamma2={},
-        vary_as={},
-        vary_n_delta2={},
-        vary_nuVC={},
-        vary_n_nuVC={},
-        vary_eta={},
-        vary_linemixing={},
+        vary_nu=None,
+        vary_sw=None,
+        vary_gamma0=None,
+        vary_n_gamma0=None,
+        vary_delta0=None,
+        vary_n_delta0=None,
+        vary_aw=None,
+        vary_n_gamma2=None,
+        vary_as=None,
+        vary_n_delta2=None,
+        vary_nuVC=None,
+        vary_n_nuVC=None,
+        vary_eta=None,
+        vary_linemixing=None,
     ):
         """Generates the parameter line list used in fitting and updates the fitting booleans to desired settings.
 
@@ -1488,6 +1530,36 @@ class Generate_FitParam_File:
             returns dataframe based on parameter line list with addition of a vary and err column for every floatable parameter.  The vary columns are defined by the inputs and the fit_intensity value.  The err columns will be populated from fit results.  The dataframe is also saved as a .csv file.  line intensity will be normalized by the fit_intensity (set to the sw_scale_factor). The term 'sw' is now equal to the normalized value, such that in the simulation 'sw'*sw_scale_factor is used for the line intensity. Because line intensities are so small it is difficult to fit the value without normalization.
 
         """
+
+        # Better Defaults
+        if vary_nu is None:
+            vary_nu = {}
+        if vary_sw is None:
+            vary_sw = {}
+        if vary_gamma0 is None:
+            vary_gamma0 = {}
+        if vary_n_gamma0 is None:
+            vary_n_gamma0 = {}
+        if vary_delta0 is None:
+            vary_delta0 = {}
+        if vary_n_delta0 is None:
+            vary_n_delta0 = {}
+        if vary_aw is None:
+            vary_aw = {}
+        if vary_n_gamma2 is None:
+            vary_n_gamma2 = {}
+        if vary_as is None:
+            vary_as = {}
+        if vary_n_delta2 is None:
+            vary_n_delta2 = {}
+        if vary_nuVC is None:
+            vary_nuVC = {}
+        if vary_n_nuVC is None:
+            vary_n_nuVC = {}
+        if vary_eta is None:
+            vary_eta = {}
+        if vary_linemixing is None:
+            vary_linemixing = {}
 
         param_linelist_df = self.get_param_linelist().copy()
         # Intensity Thresholding
@@ -2259,7 +2331,7 @@ class Generate_FitParam_File:
         vary_baseline=True,
         vary_pressure=False,
         vary_temperature=False,
-        vary_molefraction={},
+        vary_molefraction=None,
         vary_xshift=False,
         vary_etalon_amp=False,
         vary_etalon_freq=False,
@@ -2295,6 +2367,11 @@ class Generate_FitParam_File:
 
 
         """
+
+        # Better Defaults
+        if vary_molefraction is None:
+            vary_molefraction = {}
+
         base_linelist_df = self.get_base_linelist().copy()
         parameters = list(base_linelist_df)
         for param in parameters:
