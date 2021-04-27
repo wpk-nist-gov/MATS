@@ -1,5 +1,5 @@
 #Import Packages
-from Utilities import *
+from .Utilities import *
 
 
 def HTP_from_DF_select(linelist, waves, wing_cutoff = 50, wing_wavenumbers = 50, wing_method = 'wing_cutoff',

@@ -17,11 +17,11 @@ which allows for its use as an error analysis tool.
 
 
 
-from Spectrum import *
-from Dataset import *
-from Generate_FitParam_File import *
-from Edit_Fit_Param_Files import *
-from Fit_Dataset import *
+from .Spectrum import *
+from .Dataset import *
+from .Generate_FitParam_File import *
+from .Edit_Fit_Param_Files import *
+from .Fit_Dataset import *
 
 
 

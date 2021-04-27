@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-from hapi import PYTIPS2017, pcqsdhc, ISO, ISO_INDEX
-from hapi import convolveSpectrumSame, SLIT_MICHELSON, SLIT_DIFFRACTION, SLIT_COSINUS, SLIT_DISPERSION, SLIT_GAUSSIAN, SLIT_TRIANGULAR, SLIT_RECTANGULAR
+from .hapi import PYTIPS2017, pcqsdhc, ISO, ISO_INDEX
+from .hapi import convolveSpectrumSame, SLIT_MICHELSON, SLIT_DIFFRACTION, SLIT_COSINUS, SLIT_DISPERSION, SLIT_GAUSSIAN, SLIT_TRIANGULAR, SLIT_RECTANGULAR
 import qgrid
 from bisect import bisect
 import re
 from lmfit import Parameters, Minimizer
-from Karman_CIA import Karman_CIA_Model
+from .Karman_CIA import Karman_CIA_Model
 
 
 #Constants

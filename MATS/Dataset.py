@@ -1,6 +1,6 @@
 #Import Packages
 
-from Utilities import *
+from .Utilities import *
 
 
 
