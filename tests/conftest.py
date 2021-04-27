@@ -38,6 +38,12 @@ class FixtureBase(object):
         ).set_index("name")
         return df
 
+    @staticmethod
+    def assert_params_equal(a, b, vcol="value", scol="stderr", rtol=1e-8):
+        """
+        test on rtol of value
+        """
+
 
 class FixtureSimulation(FixtureBase):
     def _init_sub(self):

@@ -33,10 +33,10 @@ def HTP_from_DF_select(
     wing_method="wing_cutoff",
     p=1,
     T=296,
-    molefraction=None,  # {},
+    molefraction=None,
     natural_abundance=True,
-    abundance_ratio_MI=None,  # {},
-    Diluent=None,  # {},
+    abundance_ratio_MI=None,
+    Diluent=None,
     diluent="air",
     IntensityThreshold=1e-30,
 ):
@@ -336,7 +336,8 @@ class Spectrum:
 
     def __init__(
         self,
-        filename,
+        # filename,
+        data,
         molefraction=None,
         natural_abundance=True,
         diluent="air",
@@ -367,7 +368,8 @@ class Spectrum:
         if etalons is None:
             etalons = {}
 
-        self.filename = filename
+        # self.filename = filename
+        self.data = data
         self.molefraction = molefraction
         self.natural_abundance = natural_abundance
         self.abundance_ratio_MI = abundance_ratio_MI
@@ -395,33 +397,42 @@ class Spectrum:
         self.diluent_sum_check()  # Makes sure that the diluent contributions sum to 1
 
         # Defined from contents of file
-        file_contents = pd.read_csv(self.filename + ".csv", float_precision="high")
-        self.pressure = file_contents[self.pressure_column].mean() / 760
-        self.temperature = file_contents[self.temperature_column].mean() + 273.15
+        # file_contents = pd.read_csv(self.filename + ".csv", float_precision="high")
+        self.pressure = self.data[self.pressure_column].mean() / 760
+        self.temperature = self.data[self.temperature_column].mean() + 273.15
         if self.input_freq:
-            self.frequency = file_contents[self.frequency_column].values
+            self.frequency = self.data[self.frequency_column].values
             self.wavenumber = self.frequency * 10 ** 6 / 29979245800
         else:
-            self.wavenumber = file_contents[self.frequency_column].values
+            self.wavenumber = self.data[self.frequency_column].values
             self.frequency = self.wavenumber * 29979245800 / 10 ** 6
         if self.input_tau:
-            self.tau = file_contents[self.tau_column].values
+            self.tau = self.data[self.tau_column].values
             self.alpha = (self.tau * 0.0299792458) ** -1
         else:
-            self.alpha = file_contents[self.tau_column].values
+            self.alpha = self.data[self.tau_column].values
             self.tau = (self.alpha * 0.0299792458) ** -1
 
         if self.tau_stats_column is not None:
-            self.tau_stats = file_contents[self.tau_stats_column].values
+            self.tau_stats = self.data[self.tau_stats_column].values
         else:
             self.tau_stats = None
         if self.segment_column is not None:
-            self.segments = file_contents[self.segment_column].values
+            self.segments = self.data[self.segment_column].values
         else:
-            self.segments = len(file_contents) * [1]
+            self.segments = len(self.data) * [1]
         self.model = len(self.alpha) * [0]
         self.residuals = self.alpha - self.model
         self.background = len(self.alpha) * [0]
+
+    @classmethod
+    def from_csv(cls, filename, *args, **kwargs):
+        """
+        from filename
+        """
+
+        data = pd.read_csv(filename, float_precision="high")
+        return cls(data, *args, **kwargs)
 
     def diluent_sum_check(self):
         """Checks that if multiple broadeners are used that the contributions sum to one.
@@ -464,8 +475,8 @@ class Spectrum:
         return wavenumber_segments, alpha_segments, indices_segments
 
     # GETTERS
-    def get_filename(self):
-        return self.filename
+    # def get_filename(self):
+    #     return self.filename
 
     def get_molefraction(self):
         return self.molefraction
@@ -549,30 +560,30 @@ class Spectrum:
 
     def set_pressure_column(self, new_pressure_column):
         self.pressure_column = new_pressure_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.pressure = file_contents[self.pressure_column].mean() / 760
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.pressure = self.data[self.pressure_column].mean() / 760
 
     def set_temperature_column(self, new_temperature_column):
         self.temperature_colum = new_temperature_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.temperature = file_contents[self.temperature_column].mean() + 273.15
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.temperature = self.data[self.temperature_column].mean() + 273.15
 
     def set_frequency_column(self, new_frequency_column):
         self.frequency_column = new_frequency_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.frequency = file_contents[self.frequency_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.frequency = self.data[self.frequency_column].values
         self.wavenumber = self.frequency * 10 ** 6 / 29979245800
 
     def set_tau_column(self, new_tau_column):
         self.tau_column = new_tau_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.tau = file_contents[self.tau_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.tau = self.data[self.tau_column].values
         self.alpha = (self.tau * 0.0299792458) ** -1
 
     def set_tau_stats_column(self, new_tau_stats_column):
         self.tau_stats_column = new_tau_stats_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.tau_stats = file_contents[self.tau_stats_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.tau_stats = self.data[self.tau_stats_column].values
 
     def set_etalons(self, new_etalons):
         self.etalons = new_etalons
@@ -660,14 +671,14 @@ class Spectrum:
             returns a pandas dataframe with columns related to the spectrum information
 
         """
-        file_contents = pd.read_csv(self.filename + ".csv")
+        # file_contents = pd.read_csv(self.filename + ".csv")
         new_file = pd.DataFrame()
         new_file["Spectrum Number"] = [self.spectrum_number] * len(self.alpha)
         new_file["Spectrum Name"] = [self.filename] * len(self.alpha)
         new_file["Frequency (MHz)"] = self.frequency
         new_file["Wavenumber (cm-1)"] = self.wavenumber
-        new_file["Pressure (Torr)"] = file_contents[self.pressure_column].values
-        new_file["Temperature (C)"] = file_contents[self.temperature_column].values
+        new_file["Pressure (Torr)"] = self.data[self.pressure_column].values
+        new_file["Temperature (C)"] = self.data[self.temperature_column].values
         new_file["Tau (us)"] = self.tau
         new_file["Tau Error (%)"] = self.tau_stats
         new_file["Alpha (ppm/cm)"] = self.alpha
@@ -1277,6 +1288,8 @@ def simulate_spectrum(
     # Define Segments
     seg_number = np.arange(len(wavenumbers))
     seg_number = np.abs(seg_number // (len(wavenumbers) / num_segments)).astype(int)
+    # or
+    # seg_number = (np.arange(len(wavenumbers)) / (len(wavenumbers) / num_segments)).astype(int)
 
     alpha_array = len(wavenumbers) * [0]
     pressure_array = len(wavenumbers) * [0]
@@ -1350,7 +1363,7 @@ def simulate_spectrum(
     spectrum.to_csv(filename + ".csv", index=False)
     # Returns a spectrum class object for facile integration into the fitting workflow
     return Spectrum(
-        filename,
+        data=spectrum,
         molefraction=molefraction,
         natural_abundance=natural_abundance,
         diluent=diluent,
@@ -1430,8 +1443,8 @@ class Generate_FitParam_File:
         fit_intensity=1e-26,
         fit_window=1.5,
         sim_window=5,
-        param_linelist_savename="Parameter_LineList",
-        base_linelist_savename="Baseline_LineList",
+        # param_linelist_savename="Parameter_LineList",
+        # base_linelist_savename="Baseline_LineList",
         nu_constrain=True,
         sw_constrain=True,
         gamma0_constrain=True,
@@ -1451,8 +1464,8 @@ class Generate_FitParam_File:
         self.fit_intensity = fit_intensity
         self.fit_window = fit_window
         self.sim_window = sim_window
-        self.base_linelist_savename = base_linelist_savename
-        self.param_linelist_savename = param_linelist_savename
+        # self.base_linelist_savename = base_linelist_savename
+        # self.param_linelist_savename = param_linelist_savename
         self.nu_constrain = nu_constrain
         self.sw_constrain = sw_constrain
         self.gamma0_constrain = gamma0_constrain
@@ -2323,7 +2336,7 @@ class Generate_FitParam_File:
             ordered_list.append(item + "_err")
             ordered_list.append(item + "_vary")
         param_linelist_df = param_linelist_df[ordered_list]
-        param_linelist_df.to_csv(self.param_linelist_savename + ".csv")
+        # param_linelist_df.to_csv(self.param_linelist_savename + ".csv")
         return param_linelist_df
 
     def generate_fit_baseline_linelist(
@@ -2422,7 +2435,7 @@ class Generate_FitParam_File:
         base_linelist_df = base_linelist_df.reindex(
             sorted(base_linelist_df.columns), axis=1
         )
-        base_linelist_df.to_csv(self.base_linelist_savename + ".csv")
+        # base_linelist_df.to_csv(self.base_linelist_savename + ".csv")
         return base_linelist_df
 
 
@@ -2610,8 +2623,11 @@ class Fit_DataSet:
     def __init__(
         self,
         dataset,
-        base_linelist_file,
-        param_linelist_file,
+        base_linelist,
+        param_linelist,
+        # lineparam_list,
+        # base_linelist_file,
+        # param_linelist_file,
         minimum_parameter_fit_intensity=1e-27,
         baseline_limit=False,
         baseline_limit_factor=10,
@@ -2656,14 +2672,18 @@ class Fit_DataSet:
     ):
 
         self.dataset = dataset
-        self.base_linelist_file = base_linelist_file
-        self.baseline_list = pd.read_csv(
-            self.base_linelist_file + ".csv"
-        )  # , index_col = 0
-        self.param_linelist_file = param_linelist_file
-        self.lineparam_list = pd.read_csv(
-            self.param_linelist_file + ".csv", index_col=0
-        )
+        # self.base_linelist_file = base_linelist_file
+        # self.baseline_list = pd.read_csv(
+        #     self.base_linelist_file + ".csv"
+        # )  # , index_col = 0
+        # self.param_linelist_file = param_linelist_file
+        # self.lineparam_list = pd.read_csv(
+        #     self.param_linelist_file + ".csv", index_col=0
+        # )
+
+        self.base_linelist = base_linelist
+        self.param_linelist = param_linelist
+
         self.minimum_parameter_fit_intensity = minimum_parameter_fit_intensity
         self.baseline_limit = baseline_limit
         self.baseline_limit_factor = baseline_limit_factor
@@ -2708,6 +2728,16 @@ class Fit_DataSet:
         self.linemixing_limit = linemixing_limit
         self.linemixing_limit_factor = linemixing_limit_factor
 
+    @classmethod
+    def from_csv(
+        cls, dataset, base_linelist_file, param_linelist_file, *args, **kwargs
+    ):
+
+        base_linelist = pd.read_csv(base_linelist_file)
+        param_linelist = pd.read_csv(param_linelist_file, index_col=0)
+
+        return cls(dataset, base_linelist, param_linelist, *args, **kwargs)
+
     def generate_params(self):
         """Generates the lmfit parameter object that will be used in fitting.
 
@@ -2721,7 +2751,7 @@ class Fit_DataSet:
         params = Parameters()
         # Baseline Parameters
         baseline_parameters = []
-        for base_param in list(self.baseline_list):
+        for base_param in list(self.base_linelist):
             if (
                 ("_vary" not in base_param)
                 and ("_err" not in base_param)
@@ -2729,55 +2759,55 @@ class Fit_DataSet:
                 and ("Segment Number" not in base_param)
             ):
                 baseline_parameters.append(base_param)
-        for index in self.baseline_list.index.values:
-            spec_num = self.baseline_list.iloc[index]["Spectrum Number"]
-            seg_num = self.baseline_list.iloc[index]["Segment Number"]
+        for index in self.base_linelist.index.values:
+            spec_num = self.base_linelist.iloc[index]["Spectrum Number"]
+            seg_num = self.base_linelist.iloc[index]["Segment Number"]
             for base_param in baseline_parameters:
-                if self.baseline_list.loc[index][base_param] == 0:
+                if self.base_linelist.loc[index][base_param] == 0:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                     )
                 elif ("Pressure" in base_param) and self.pressure_limit:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(1 / self.pressure_limit_factor)
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                         max=self.pressure_limit_factor
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                     )
                 elif ("Temperature" in base_param) and self.temperature_limit:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(1 / self.temperature_limit_factor)
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                         max=self.temperature_limit_factor
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                     )
                 elif ("molefraction" in base_param) and self.molefraction_limit:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(1 / self.molefraction_limit_factor)
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                         max=self.molefraction_limit_factor
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                     )
                 elif ("baseline" in base_param) and self.baseline_limit:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(1 / self.baseline_limit_factor)
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                         max=self.baseline_limit_factor
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                     )
                 elif (
                     ("etalon_" in base_param)
@@ -2786,12 +2816,12 @@ class Fit_DataSet:
                 ):
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(1 / self.etalon_limit_factor)
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                         max=self.etalon_limit_factor
-                        * self.baseline_list.loc[index][base_param],
+                        * self.base_linelist.loc[index][base_param],
                     )
                 elif (
                     ("etalon_" in base_param)
@@ -2800,33 +2830,33 @@ class Fit_DataSet:
                 ):
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=-2 * np.pi,
                         max=2 * np.pi,
                     )
                 elif ("x_shift" in base_param) and self.x_shift_limit:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                         min=(
-                            self.baseline_list.loc[index][base_param]
+                            self.base_linelist.loc[index][base_param]
                             - self.x_shift_limit_magnitude
                         ),
                         max=self.x_shift_limit_magnitude
-                        + self.baseline_list.loc[index][base_param],
+                        + self.base_linelist.loc[index][base_param],
                     )
                 else:
                     params.add(
                         base_param + "_" + str(int(spec_num)) + "_" + str(int(seg_num)),
-                        self.baseline_list.loc[index][base_param],
-                        self.baseline_list.loc[index][base_param + "_vary"],
+                        self.base_linelist.loc[index][base_param],
+                        self.base_linelist.loc[index][base_param + "_vary"],
                     )
 
         # Lineshape parameters
         linelist_params = []
-        for line_param in list(self.lineparam_list):
+        for line_param in list(self.param_linelist):
             if (self.dataset.get_number_nominal_temperatures()[0]) == 1:
                 if (
                     ("_vary" not in line_param)
@@ -2920,11 +2950,11 @@ class Fit_DataSet:
                 linemix_terms_constrained.append(
                     "y_" + diluent + "_" + str(temperature)
                 )
-        for spec_line in self.lineparam_list.index.values:
+        for spec_line in self.param_linelist.index.values:
             if (
-                self.lineparam_list.loc[spec_line]["sw"]
+                self.param_linelist.loc[spec_line]["sw"]
                 >= self.minimum_parameter_fit_intensity
-                / self.lineparam_list.loc[spec_line]["sw_scale_factor"]
+                / self.param_linelist.loc[spec_line]["sw_scale_factor"]
             ):  # bigger than 1 because fit_intensity / fit_intensity
                 for line_param in linelist_params:
                     indices = [m.start() for m in re.finditer("_", line_param)]
@@ -2934,20 +2964,20 @@ class Fit_DataSet:
                         if self.nu_limit:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
-                                min=self.lineparam_list.loc[spec_line][line_param]
+                                min=self.param_linelist.loc[spec_line][line_param]
                                 - self.nu_limit_magnitude,
-                                max=self.lineparam_list.loc[spec_line][line_param]
+                                max=self.param_linelist.loc[spec_line][line_param]
                                 + self.nu_limit_magnitude,
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -2960,20 +2990,20 @@ class Fit_DataSet:
                         if self.nu_limit:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
-                                min=self.lineparam_list.loc[spec_line][line_param]
+                                min=self.param_linelist.loc[spec_line][line_param]
                                 - self.nu_limit_magnitude,
-                                max=self.lineparam_list.loc[spec_line][line_param]
+                                max=self.param_linelist.loc[spec_line][line_param]
                                 + self.nu_limit_magnitude,
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -2982,20 +3012,20 @@ class Fit_DataSet:
                         if self.sw_limit:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.sw_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.sw_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3008,20 +3038,20 @@ class Fit_DataSet:
                         if self.sw_limit:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.sw_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.sw_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3034,27 +3064,27 @@ class Fit_DataSet:
                     ):
                         if (
                             self.gamma0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.gamma0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][
+                                * self.param_linelist.loc[int(spec_line)][
                                     line_param
-                                ],  # (1 - (self.gamma0_limit_percent / 100))*lineparam_list.loc[int(spec_line)][line_param],
+                                ],  # (1 - (self.gamma0_limit_percent / 100))*param_linelist.loc[int(spec_line)][line_param],
                                 max=self.gamma0_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
-                            )  # (1 + (self.gamma0_limit_percent / 100))*lineparam_list.loc[int(spec_line)][line_param])
+                                * self.param_linelist.loc[int(spec_line)][line_param],
+                            )  # (1 + (self.gamma0_limit_percent / 100))*param_linelist.loc[int(spec_line)][line_param])
 
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3066,50 +3096,50 @@ class Fit_DataSet:
                     ):
                         if (
                             self.gamma0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.gamma0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][
+                                * self.param_linelist.loc[int(spec_line)][
                                     line_param
-                                ],  # (1 - (self.gamma0_limit_percent / 100))*lineparam_list.loc[int(spec_line)][line_param],
+                                ],  # (1 - (self.gamma0_limit_percent / 100))*param_linelist.loc[int(spec_line)][line_param],
                                 max=self.gamma0_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
-                            )  # (1 + (self.gamma0_limit_percent / 100))*lineparam_list.loc[int(spec_line)][line_param])
+                                * self.param_linelist.loc[int(spec_line)][line_param],
+                            )  # (1 + (self.gamma0_limit_percent / 100))*param_linelist.loc[int(spec_line)][line_param])
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
                     elif "n_gamma0" in line_param:
                         if (
                             self.n_gamma0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.n_gamma0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.n_gamma0_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3122,24 +3152,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.delta0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.delta0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.delta0_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3151,49 +3181,49 @@ class Fit_DataSet:
                     ):
                         if (
                             self.delta0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.delta0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.delta0_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
                     elif "n_delta0" in line_param:
                         if (
                             self.n_delta0_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.n_delta0_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.n_delta0_limit_factor
                                 / 100
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3205,24 +3235,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.SD_gamma_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.SD_gamma_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.SD_gamma_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=0,
@@ -3234,24 +3264,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.SD_gamma_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.SD_gamma_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.SD_gamma_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3259,24 +3289,24 @@ class Fit_DataSet:
 
                         if (
                             self.n_gamma2_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.n_gamma2_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=(self.n_gamma2_limit_factor / 100)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3288,24 +3318,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.SD_delta_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.SD_delta_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.SD_delta_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3316,25 +3346,25 @@ class Fit_DataSet:
                     ):
                         if (
                             self.SD_delta_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.SD_delta_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.SD_delta_limit_factor
                                 / 100
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3342,24 +3372,24 @@ class Fit_DataSet:
 
                         if (
                             self.n_delta2_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.n_delta2_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.n_delta2_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3372,24 +3402,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.nuVC_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.nuVC_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.nuVC_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3401,48 +3431,48 @@ class Fit_DataSet:
                     ):
                         if (
                             self.nuVC_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.nuVC_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.nuVC_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
                     elif "n_nuVC" in line_param:
                         if (
                             self.n_nuVC_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.n_nuVC_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.n_nuVC_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3454,24 +3484,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.eta_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.eta_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=(self.eta_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3482,24 +3512,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.eta_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.eta_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.eta_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3511,24 +3541,24 @@ class Fit_DataSet:
                     ):
                         if (
                             self.linemixing_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.linemixing_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.linemixing_limit_factor
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3539,25 +3569,25 @@ class Fit_DataSet:
                     ):
                         if (
                             self.linemixing_limit
-                            and self.lineparam_list.loc[spec_line][line_param] != 0
+                            and self.param_linelist.loc[spec_line][line_param] != 0
                         ):
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                                 min=(1 / self.linemixing_limit_factor)
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                                 max=self.linemixing_limit_factor
                                 / 100
-                                * self.lineparam_list.loc[int(spec_line)][line_param],
+                                * self.param_linelist.loc[int(spec_line)][line_param],
                             )
                         else:
                             params.add(
                                 line_param + "_" + "line_" + str(spec_line),
-                                self.lineparam_list.loc[spec_line][line_param],
-                                self.lineparam_list.loc[spec_line][
+                                self.param_linelist.loc[spec_line][line_param],
+                                self.param_linelist.loc[spec_line][
                                     line_param + "_vary"
                                 ],
                             )
@@ -3761,10 +3791,10 @@ class Fit_DataSet:
                 columns.append("eta_" + species)
                 columns.append("y_" + species + "_" + str(nominal_temp))
             rename_dictionary = {}
-            for column in self.lineparam_list:
+            for column in self.param_linelist:
                 if ("vary" not in column) and ("err" not in column):
                     if (
-                        (column + "_" + str(spectrum_number)) in self.lineparam_list
+                        (column + "_" + str(spectrum_number)) in self.param_linelist
                     ) and ("y_" not in column):
                         columns = [
                             (column + "_" + str(spectrum_number)) if x == column else x
@@ -3774,7 +3804,7 @@ class Fit_DataSet:
                             (column + "_" + str(spectrum_number))
                         ] = column
                     elif "y_" in column:
-                        if (column + "_" + str(spectrum_number)) in self.lineparam_list:
+                        if (column + "_" + str(spectrum_number)) in self.param_linelist:
                             columns = [
                                 (column + "_" + str(spectrum_number))
                                 if x == column
@@ -3788,7 +3818,7 @@ class Fit_DataSet:
                             rename_dictionary[(column)] = column[
                                 : column.find(str(nominal_temp)) - 1
                             ]
-            linelist_for_sim = self.lineparam_list[columns].copy()
+            linelist_for_sim = self.param_linelist[columns].copy()
 
             # Replaces the relevant linelist locations with the
             for parameter in linelist_params:
@@ -4003,7 +4033,7 @@ class Fit_DataSet:
                 spectrum.plot_model_residuals()
 
     def update_params(
-        self, result, base_linelist_update_file=None, param_linelist_update_file=None
+        self, result, base_linelist_update_file, param_linelist_update_file
     ):
         """Updates the baseline and line parameter files based on fit results with the option to write over the file (default) or save as a new file.
 
@@ -4018,25 +4048,25 @@ class Fit_DataSet:
             Name of file to save the updated line parameters. Default is to override the input. The default is None.
 
         """
-        if base_linelist_update_file is None:
-            base_linelist_update_file = self.base_linelist_file
-        if param_linelist_update_file is None:
-            param_linelist_update_file = self.param_linelist_file
+        # if base_linelist_update_file is None:
+        #     base_linelist_update_file = self.base_linelist_file
+        # if param_linelist_update_file is None:
+        #     param_linelist_update_file = self.param_linelist_file
         for key, par in result.params.items():
             if ("Pressure" in par.name) or ("Temperature" in par.name):
                 indices = [m.start() for m in re.finditer("_", par.name)]
                 parameter = par.name[: indices[0]]
                 spectrum = int(par.name[indices[0] + 1 : indices[1]])
                 segment = int(par.name[indices[1] + 1 :])
-                self.baseline_list.loc[
-                    (self.baseline_list["Segment Number"] == segment)
-                    & (self.baseline_list["Spectrum Number"] == spectrum),
+                self.base_linelist.loc[
+                    (self.base_linelist["Segment Number"] == segment)
+                    & (self.base_linelist["Spectrum Number"] == spectrum),
                     parameter,
                 ] = par.value
                 if par.vary:
-                    self.baseline_list.loc[
-                        (self.baseline_list["Segment Number"] == segment)
-                        & (self.baseline_list["Spectrum Number"] == spectrum),
+                    self.base_linelist.loc[
+                        (self.base_linelist["Segment Number"] == segment)
+                        & (self.base_linelist["Spectrum Number"] == spectrum),
                         parameter + "_err",
                     ] = par.stderr
 
@@ -4049,15 +4079,15 @@ class Fit_DataSet:
                 parameter = par.name[: indices[1]]
                 spectrum = int(par.name[indices[1] + 1 : indices[2]])
                 segment = int(par.name[indices[2] + 1 :])
-                self.baseline_list.loc[
-                    (self.baseline_list["Segment Number"] == segment)
-                    & (self.baseline_list["Spectrum Number"] == spectrum),
+                self.base_linelist.loc[
+                    (self.base_linelist["Segment Number"] == segment)
+                    & (self.base_linelist["Spectrum Number"] == spectrum),
                     parameter,
                 ] = par.value
                 if par.vary:
-                    self.baseline_list.loc[
-                        (self.baseline_list["Segment Number"] == segment)
-                        & (self.baseline_list["Spectrum Number"] == spectrum),
+                    self.base_linelist.loc[
+                        (self.base_linelist["Segment Number"] == segment)
+                        & (self.base_linelist["Spectrum Number"] == spectrum),
                         parameter + "_err",
                     ] = par.stderr
             elif "etalon" in par.name:
@@ -4065,25 +4095,25 @@ class Fit_DataSet:
                 parameter = par.name[: indices[2]]
                 spectrum = int(par.name[indices[2] + 1 : indices[3]])
                 segment = int(par.name[indices[3] + 1 :])
-                self.baseline_list.loc[
-                    (self.baseline_list["Segment Number"] == segment)
-                    & (self.baseline_list["Spectrum Number"] == spectrum),
+                self.base_linelist.loc[
+                    (self.base_linelist["Segment Number"] == segment)
+                    & (self.base_linelist["Spectrum Number"] == spectrum),
                     parameter,
                 ] = par.value
                 if par.vary:
-                    self.baseline_list.loc[
-                        (self.baseline_list["Segment Number"] == segment)
-                        & (self.baseline_list["Spectrum Number"] == spectrum),
+                    self.base_linelist.loc[
+                        (self.base_linelist["Segment Number"] == segment)
+                        & (self.base_linelist["Spectrum Number"] == spectrum),
                         parameter + "_err",
                     ] = par.stderr
             else:
                 parameter = par.name[: par.name.find("_line")]
                 line = int(par.name[par.name.find("_line") + 6 :])
-                self.lineparam_list.loc[line, parameter] = par.value
+                self.param_linelist.loc[line, parameter] = par.value
                 if par.vary:
-                    self.lineparam_list.loc[line, parameter + "_err"] = par.stderr
-        self.baseline_list.to_csv(base_linelist_update_file + ".csv", index=False)
-        self.lineparam_list.to_csv(param_linelist_update_file + ".csv")
+                    self.param_linelist.loc[line, parameter + "_err"] = par.stderr
+        self.base_linelist.to_csv(base_linelist_update_file + ".csv", index=False)
+        self.param_linelist.to_csv(param_linelist_update_file + ".csv")
         # Calculate Baseline + Etalons and add to the Baseline term for each spectra
         for spectrum in self.dataset.spectra:
             (

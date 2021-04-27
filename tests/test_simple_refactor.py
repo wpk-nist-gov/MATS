@@ -109,7 +109,7 @@ def test_sim_simple(sim_fix):
         linemixing_constrain=True,
     )
 
-    FITPARAMS.generate_fit_param_linelist_from_linelist(
+    param_linelist_fit = FITPARAMS.generate_fit_param_linelist_from_linelist(
         vary_nu={7: {1: True, 2: False, 3: False}},
         vary_sw={7: {1: True, 2: False, 3: False}},
         vary_gamma0={7: {1: True, 2: False, 3: False}, 1: {1: False}},
@@ -126,7 +126,7 @@ def test_sim_simple(sim_fix):
         vary_linemixing={7: {1: False}},
     )
 
-    FITPARAMS.generate_fit_baseline_linelist(
+    base_linelist_fit = FITPARAMS.generate_fit_baseline_linelist(
         vary_baseline=True,
         vary_molefraction={7: False, 1: False},
         vary_xshift=False,
@@ -139,8 +139,10 @@ def test_sim_simple(sim_fix):
 
     fit_data = MATS.Fit_DataSet(
         SPECTRA,
-        "Baseline_LineList",
-        "Parameter_LineList",
+        base_linelist=base_linelist_fit.reset_index(),
+        param_linelist=param_linelist_fit,
+        # "Baseline_LineList",
+        # "Parameter_LineList",
         minimum_parameter_fit_intensity=Fit_Intensity,
         baseline_limit=False,
         baseline_limit_factor=10,
@@ -210,8 +212,8 @@ def test_exp_simple(exp_fix):
 
     def get_spectrum(path):
         # Define all Spectra individually
-        return MATS.Spectrum(
-            path,
+        return MATS.Spectrum.from_csv(
+            str(path) + ".csv",
             molefraction={7: 0.01949},
             natural_abundance=True,
             diluent="air",
@@ -276,7 +278,7 @@ def test_exp_simple(exp_fix):
         linemixing_constrain=True,
     )
 
-    FITPARAMS.generate_fit_param_linelist_from_linelist(
+    param_linelist_fit = FITPARAMS.generate_fit_param_linelist_from_linelist(
         vary_nu={7: {1: True, 2: False, 3: False}},
         vary_sw={7: {1: True, 2: False, 3: False}},
         vary_gamma0={7: {1: True, 2: False, 3: False}, 1: {1: False}},
@@ -293,7 +295,7 @@ def test_exp_simple(exp_fix):
         vary_linemixing={7: {1: False}},
     )
 
-    FITPARAMS.generate_fit_baseline_linelist(
+    base_linelist_fit = FITPARAMS.generate_fit_baseline_linelist(
         vary_baseline=True,
         vary_molefraction={7: False, 1: False},
         vary_xshift=False,
@@ -305,8 +307,8 @@ def test_exp_simple(exp_fix):
     # os.chdir(path)
     fit_data = MATS.Fit_DataSet(
         SPECTRA,
-        "Baseline_LineList",
-        "Parameter_LineList",
+        base_linelist=base_linelist_fit.reset_index(),
+        param_linelist=param_linelist_fit,
         minimum_parameter_fit_intensity=Fit_Intensity,
         baseline_limit=False,
         baseline_limit_factor=10,
@@ -364,4 +366,4 @@ def test_exp_simple(exp_fix):
     a = exp_fix.params_to_frame(result.params)
     b = exp_fix.params_to_frame(exp_fix.result.params)
 
-    pd.testing.assert_frame_equal(a, b)
+    pd.testing.assert_frame_equal(a, b, rtol=1e-4, atol=1e-5)
