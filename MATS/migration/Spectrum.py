@@ -69,7 +69,7 @@ class Spectrum:
 
     def __init__(
         self,
-        filename,
+        data,
         molefraction=None,
         natural_abundance=True,
         isotope_list=ISO,
@@ -102,7 +102,7 @@ class Spectrum:
         if etalons is None:
             etalons = {}
 
-        self.filename = filename
+        self.data = data
         self.molefraction = molefraction
         self.natural_abundance = natural_abundance
         self.abundance_ratio_MI = abundance_ratio_MI
@@ -161,38 +161,46 @@ class Spectrum:
         self.diluent_sum_check()  # Makes sure that the diluent contributions sum to 1
 
         # Defined from contents of file
-        file_contents = pd.read_csv(self.filename + ".csv", float_precision="high")
-        self.pressure = file_contents[self.pressure_column].mean() / 760
-        self.temperature = file_contents[self.temperature_column].mean() + 273.15
+        # file_contents = pd.read_csv(self.filename + ".csv", float_precision="high")
+        self.pressure = self.data[self.pressure_column].mean() / 760
+        self.temperature = self.data[self.temperature_column].mean() + 273.15
         if self.input_freq:
-            self.frequency = file_contents[self.frequency_column].values
+            self.frequency = self.data[self.frequency_column].values
             self.wavenumber = self.frequency * 10 ** 6 / CONSTANTS["c"]
         else:
-            self.wavenumber = file_contents[self.frequency_column].values
+            self.wavenumber = self.data[self.frequency_column].values
             self.frequency = self.wavenumber * CONSTANTS["c"] / 10 ** 6
         if self.input_tau:
-            self.tau = file_contents[self.tau_column].values
+            self.tau = self.data[self.tau_column].values
             self.alpha = (self.tau * CONSTANTS["c"] / 1e12) ** -1
         else:
-            self.alpha = file_contents[self.tau_column].values
+            self.alpha = self.data[self.tau_column].values
             self.tau = (self.alpha * CONSTANTS["c"] / 1e12) ** -1
 
         if self.tau_stats_column is not None:
-            stats = file_contents[self.tau_stats_column].values
+            stats = self.data[self.tau_stats_column].values
             stats = np.nan_to_num(stats)
             median_tau_stats = np.median(stats[stats > 0])
             stats[stats <= 0] = median_tau_stats
             self.tau_stats = stats
         else:
-            self.tau_stats = len(file_contents) * [0]
+            self.tau_stats = len(self.data) * [0]
         if self.segment_column is not None:
-            self.segments = file_contents[self.segment_column].values
+            self.segments = self.data[self.segment_column].values
         else:
-            self.segments = len(file_contents) * [1]
+            self.segments = len(self.data) * [1]
         self.model = len(self.alpha) * [0]
         self.residuals = self.alpha - self.model
         self.background = len(self.alpha) * [0]
         self.cia = len(self.alpha) * [0]
+
+    @classmethod
+    def from_csv(cls, filename, *args, **kwargs):
+        """
+        from filename
+        """
+        data = pd.read_csv(filename, float_precision="high")
+        return cls(data, *args, **kwargs)
 
     def diluent_sum_check(self):
         """Checks that if multiple broadeners are used that the contributions sum to one.
@@ -237,8 +245,8 @@ class Spectrum:
         return wavenumber_segments, alpha_segments, indices_segments
 
     # GETTERS
-    def get_filename(self):
-        return self.filename
+    # def get_filename(self):
+    #     return self.filename
 
     def get_molefraction(self):
         return self.molefraction
@@ -341,30 +349,30 @@ class Spectrum:
 
     def set_pressure_column(self, new_pressure_column):
         self.pressure_column = new_pressure_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.pressure = file_contents[self.pressure_column].mean() / 760
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.pressure = self.data[self.pressure_column].mean() / 760
 
     def set_temperature_column(self, new_temperature_column):
         self.temperature_colum = new_temperature_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.temperature = file_contents[self.temperature_column].mean() + 273.15
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.temperature = self.data[self.temperature_column].mean() + 273.15
 
     def set_frequency_column(self, new_frequency_column):
         self.frequency_column = new_frequency_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.frequency = file_contents[self.frequency_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.frequency = self.data[self.frequency_column].values
         self.wavenumber = self.frequency * 10 ** 6 / CONSTANTS["c"]
 
     def set_tau_column(self, new_tau_column):
         self.tau_column = new_tau_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        self.tau = file_contents[self.tau_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        self.tau = self.data[self.tau_column].values
         self.alpha = (self.tau * CONSTANTS["c"] * 1e-12) ** -1
 
     def set_tau_stats_column(self, new_tau_stats_column):
         self.tau_stats_column = new_tau_stats_column
-        file_contents = pd.read_csv(self.filename + ".csv")
-        stats = file_contents[self.tau_stats_column].values
+        # file_contents = pd.read_csv(self.filename + ".csv")
+        stats = self.data[self.tau_stats_column].values
         stats = np.nan_to_num(stats)
         median_tau_stats = np.median(stats[stats > 0])
         stats[stats <= 0] = median_tau_stats
@@ -446,7 +454,7 @@ class Spectrum:
         ax1.set_ylabel("Residuals $(\\frac{ppm}{cm})$")
         plt.show()
 
-    def save_spectrum_info(self, save_file=False):
+    def save_spectrum_info(self, filename, save_file=False):
         """Saves spectrum information to a pandas dataframe with option to also save as as a csv file.
 
 
@@ -462,14 +470,14 @@ class Spectrum:
 
         """
 
-        file_contents = pd.read_csv(self.filename + ".csv")
+        # file_contents = pd.read_csv(self.filename + ".csv")
         new_file = pd.DataFrame()
         new_file["Spectrum Number"] = [self.spectrum_number] * len(self.alpha)
-        new_file["Spectrum Name"] = [self.filename] * len(self.alpha)
+        new_file["Spectrum Name"] = [filename] * len(self.alpha)
         new_file["Frequency (MHz)"] = self.frequency
         new_file["Wavenumber (cm-1)"] = self.wavenumber
-        new_file["Pressure (Torr)"] = file_contents[self.pressure_column].values
-        new_file["Temperature (C)"] = file_contents[self.temperature_column].values
+        new_file["Pressure (Torr)"] = self.data[self.pressure_column].values
+        new_file["Temperature (C)"] = self.data[self.temperature_column].values
         new_file["Tau (us)"] = self.tau
         new_file["Tau Error (%)"] = self.tau_stats
         new_file["Alpha (ppm/cm)"] = self.alpha
@@ -479,7 +487,7 @@ class Spectrum:
         new_file["Background"] = self.background
         new_file["CIA (ppm/cm)"] = self.cia
         if save_file:
-            new_file.to_csv(self.filename + "_saved.csv", index=False)
+            new_file.to_csv(filename + "_saved.csv", index=False)
         return new_file
 
     def fft_spectrum(self):
@@ -832,7 +840,7 @@ def simulate_spectrum(
     spectrum.to_csv(filename + ".csv", index=False)
     # Returns a spectrum class object for facile integration into the fitting workflow
     return Spectrum(
-        filename,
+        data=spectrum,
         molefraction=molefraction,
         natural_abundance=natural_abundance,
         diluent=diluent,

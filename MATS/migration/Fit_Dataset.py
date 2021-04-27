@@ -655,9 +655,12 @@ class Fit_DataSet:
     def __init__(
         self,
         dataset,
-        base_linelist_file,
-        param_linelist_file,
-        CIA_linelist_file=None,
+        base_linelist,
+        param_linelist,
+        CIA_linelist=None,
+        # base_linelist_file,
+        # param_linelist_file,
+        # CIA_linelist_file=None,
         minimum_parameter_fit_intensity=1e-27,
         weight_spectra=False,
         baseline_limit=False,
@@ -815,20 +818,27 @@ class Fit_DataSet:
         """
 
         self.dataset = dataset
-        self.base_linelist_file = base_linelist_file
-        self.baseline_list = pd.read_csv(
-            self.base_linelist_file + ".csv"
-        )  # , index_col = 0
-        self.param_linelist_file = param_linelist_file
-        self.lineparam_list = pd.read_csv(
-            self.param_linelist_file + ".csv", index_col=0
-        )
-        self.CIA_linelist_file = CIA_linelist_file
-        if self.CIA_linelist_file is not None:
-            self.CIA_linelist_file = CIA_linelist_file
-            self.CIAparam_list = pd.read_csv(self.CIA_linelist_file + ".csv")
-        else:
-            self.CIAparam_list = None
+        # self.base_linelist_file = base_linelist_file
+        # self.baseline_list = pd.read_csv(
+        #     self.base_linelist_file + ".csv"
+        # )  # , index_col = 0
+        # self.param_linelist_file = param_linelist_file
+        # self.lineparam_list = pd.read_csv(
+        #     self.param_linelist_file + ".csv", index_col=0
+        # )
+
+        self.baseline_list = base_linelist
+        self.lineparam_list = param_linelist
+
+        # self.CIA_linelist_file = CIA_linelist_file
+        # if self.CIA_linelist_file is not None:
+        #     self.CIA_linelist_file = CIA_linelist_file
+        #     self.CIAparam_list = pd.read_csv(self.CIA_linelist_file + ".csv")
+        # else:
+        #     self.CIAparam_list = None
+
+        self.CIAparam_list = CIA_linelist
+
         self.minimum_parameter_fit_intensity = minimum_parameter_fit_intensity
         self.weight_spectra = weight_spectra
         self.baseline_limit = baseline_limit
@@ -880,6 +890,29 @@ class Fit_DataSet:
         self.CIA_calculate = CIA_calculate
         self.CIA_model = CIA_model
         self.CIA_wavestep = CIA_wavestep
+
+    @classmethod
+    def from_csv(
+        cls,
+        dataset,
+        base_linelist_file,
+        param_linelist_file,
+        CIA_linelist_file=None,
+        *args,
+        **kwargs,
+    ):
+
+        base_linelist = pd.read_csv(base_linelist_file)
+        param_linelist = pd.read_csv(param_linelist_file, index_col=0)
+
+        if CIA_linelist_file is None:
+            CIA_linelist = None
+        else:
+            CIA_linelist = pd.read_csv(CIA_linelist_file)
+
+        return cls(
+            dataset, base_linelist, param_linelist, CIA_linelist, *args, **kwargs
+        )
 
     def generate_params(self):
         """Generates the lmfit parameter object that will be used in fitting.
@@ -998,7 +1031,7 @@ class Fit_DataSet:
                         self.baseline_list.loc[index][base_param + "_vary"],
                     )
         # CIA parameters
-        if self.CIA_calculate & (self.CIA_linelist_file is not None):
+        if self.CIA_calculate & (self.CIAparam_list is not None):
             if self.CIA_model is not None:
                 CIA_parameters = []
                 for CIA_param in list(self.CIAparam_list):
@@ -2373,8 +2406,8 @@ class Fit_DataSet:
     def update_params(
         self,
         result,
-        base_linelist_update_file=None,
-        param_linelist_update_file=None,
+        base_linelist_update_file,
+        param_linelist_update_file,
         CIA_linelist_update_file=None,
     ):
         """Updates the baseline and line parameter files based on fit results with the option to write over the file (default) or save as a new file and updates baseline and CIA values in the spectrum objects.
@@ -2393,12 +2426,12 @@ class Fit_DataSet:
 
         """
 
-        if base_linelist_update_file is None:
-            base_linelist_update_file = self.base_linelist_file
-        if param_linelist_update_file is None:
-            param_linelist_update_file = self.param_linelist_file
-        if CIA_linelist_update_file is None:
-            CIA_linelist_update_file = self.CIA_linelist_file
+        # if base_linelist_update_file is None:
+        #     base_linelist_update_file = self.base_linelist_file
+        # if param_linelist_update_file is None:
+        #     param_linelist_update_file = self.param_linelist_file
+        # if CIA_linelist_update_file is None:
+        #     CIA_linelist_update_file = self.CIA_linelist_file
         for key, par in result.params.items():
             if "__lnsigma" in par.name:
                 pass
