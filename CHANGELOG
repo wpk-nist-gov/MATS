@@ -1,1 +1,16 @@
-v1_1 pushed on 12/27/19
+# Top level changes
+  * Added setup script, Makefile, environment definitions
+  * Added pre-commit functionality.  Right now, I'm ignoring
+  original code
+  * Added MATS.migration with new code to work with
+  * Ran code through flake8, black, etc
+  * Changed all mutable default inputs (stuff like variable={})
+  To None
+  * Changed from passing filenames to passing dataframes
+  I personally thing this is a better way to go for pipelining
+  Also, I don't like file creation as an unkown side effect
+  * Added simple test.  This just tests the final output from some of
+  the examples between the original code and the new code
+  * Added a new model MATS.exampledata for finding example data from a central location
+  * Made changes to some example notebooks to work with changes to
+  package structure.
