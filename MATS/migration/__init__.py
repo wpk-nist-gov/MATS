@@ -1,7 +1,7 @@
-from .Dataset import Dataset
-from .Fit_Dataset import Fit_DataSet
-from .Generate_FitParam_File import Generate_FitParam_File
-from .Spectrum import Spectrum, simulate_spectrum
+from .dataset import Dataset
+from .fit_dataset import Fit_DataSet
+from .generate_fitparam_file import Generate_FitParam_File
+from .spectrum import Spectrum, simulate_spectrum
 
 __all__ = [
     "Dataset",

@@ -2,7 +2,7 @@
 # from .Utilities import *
 # import re
 from ..hapi import ISO
-from .Karman_CIA import Karman_CIA_Model
+from .karman_cia import Karman_CIA_Model
 
 
 class Generate_FitParam_File:

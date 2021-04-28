@@ -6,8 +6,8 @@ import pandas as pd
 from matplotlib import gridspec
 
 from ..hapi import ISO, convolveSpectrumSame
-from .Fit_Dataset import HTP_from_DF_select, HTP_wBeta_from_DF_select
-from .Utilities import CONSTANTS, etalon
+from .fit_dataset import HTP_from_DF_select, HTP_wBeta_from_DF_select
+from .utilities import CONSTANTS, etalon
 
 
 class Spectrum:
@@ -77,6 +77,7 @@ class Spectrum:
         Diluent=None,
         abundance_ratio_MI=None,
         spectrum_number=1,
+        spectrum_name=None,
         input_freq=True,
         input_tau=True,
         pressure_column="Cavity Pressure /Torr",
@@ -137,6 +138,7 @@ class Spectrum:
                     "Double check that you did not include the equivalent of the self term explicitly (ie in an oxygen spectra having both 'O2' and 'self')."
                 )
         self.spectrum_number = spectrum_number
+        self._spectrum_name = spectrum_name
         self.pressure_column = pressure_column
         self.temperature_column = temperature_column
         self.frequency_column = frequency_column
@@ -245,26 +247,40 @@ class Spectrum:
         return wavenumber_segments, alpha_segments, indices_segments
 
     # GETTERS
+    @property
+    def spectrum_name(self):
+        if self._spectrum_name is None:
+            out = str(self.spectrum_number)
+        else:
+            out = self._spectrum_name
+        return out
+
+    def get_filename(self, prefix="spectrum_"):
+        if self._spectrum_name is None:
+            return prefix + str(self.spectrum_number)
+        else:
+            return self._spectrum_name
+
     # def get_filename(self):
     #     return self.filename
 
-    def get_molefraction(self):
-        return self.molefraction
+    # def get_molefraction(self):
+    #     return self.molefraction
 
-    def get_natural_abundance(self):
-        return self.natural_abundance
+    # def get_natural_abundance(self):
+    #     return self.natural_abundance
 
-    def get_abundance_ratio_MI(self):
-        return self.abundance_ratio_MI
+    # def get_abundance_ratio_MI(self):
+    #     return self.abundance_ratio_MI
 
-    def get_diluent(self):
-        return self.diluent
+    # def get_diluent(self):
+    #     return self.diluent
 
-    def get_Diluent(self):
-        return self.Diluent
+    # def get_Diluent(self):
+    #     return self.Diluent
 
-    def get_spectrum_number(self):
-        return self.spectrum_number
+    # def get_spectrum_number(self):
+    #     return self.spectrum_number
 
     def get_pressure(self):
         return self.pressure
@@ -446,7 +462,7 @@ class Spectrum:
             verticalalignment="center",
             transform=ax0.transAxes,
         )
-        ax0.set_title(str(self.spectrum_number) + ": " + self.filename)
+        ax0.set_title(str(self.spectrum_number))  # + ": " + self.filename)
         ax1 = plt.subplot(gs[1])
         ax1.ticklabel_format(useOffset=False)
         ax1.plot(self.wavenumber, self.residuals, "r-")
@@ -454,7 +470,7 @@ class Spectrum:
         ax1.set_ylabel("Residuals $(\\frac{ppm}{cm})$")
         plt.show()
 
-    def save_spectrum_info(self, filename, save_file=False):
+    def save_spectrum_info(self, save_file=None):
         """Saves spectrum information to a pandas dataframe with option to also save as as a csv file.
 
 
@@ -473,7 +489,7 @@ class Spectrum:
         # file_contents = pd.read_csv(self.filename + ".csv")
         new_file = pd.DataFrame()
         new_file["Spectrum Number"] = [self.spectrum_number] * len(self.alpha)
-        new_file["Spectrum Name"] = [filename] * len(self.alpha)
+        new_file["Spectrum Name"] = [self.spectrum_name] * len(self.alpha)
         new_file["Frequency (MHz)"] = self.frequency
         new_file["Wavenumber (cm-1)"] = self.wavenumber
         new_file["Pressure (Torr)"] = self.data[self.pressure_column].values
@@ -486,8 +502,8 @@ class Spectrum:
         new_file["QF"] = [self.calculate_QF()] * len(new_file)
         new_file["Background"] = self.background
         new_file["CIA (ppm/cm)"] = self.cia
-        if save_file:
-            new_file.to_csv(filename + "_saved.csv", index=False)
+        if save_file is not None:
+            new_file.to_csv(save_file, index=False)
         return new_file
 
     def fft_spectrum(self):
@@ -841,6 +857,7 @@ def simulate_spectrum(
     # Returns a spectrum class object for facile integration into the fitting workflow
     return Spectrum(
         data=spectrum,
+        spectrum_name=filename,
         molefraction=molefraction,
         natural_abundance=natural_abundance,
         diluent=diluent,

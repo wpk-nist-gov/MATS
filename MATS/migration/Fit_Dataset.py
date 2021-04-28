@@ -8,8 +8,8 @@ import pandas as pd
 from lmfit import Minimizer, Parameters
 
 from ..hapi import ISO, PYTIPS2017, convolveSpectrumSame, pcqsdhc
-from .Karman_CIA import Karman_CIA_Model
-from .Utilities import CONSTANTS, etalon, molecular_mass
+from .karman_cia import Karman_CIA_Model
+from .utilities import CONSTANTS, etalon, molecular_mass
 
 
 def HTP_from_DF_select(
@@ -2317,6 +2317,12 @@ class Fit_DataSet:
         total_residuals = np.asarray(total_residuals)
         total_simulated = np.asarray(total_simulated)
         return total_residuals
+
+    # def build_X_params(self, params, wing_cutoff=60, wing_wavenumbers=60 wing_method='wing_cutoff'):
+    #     """
+    #     build X and params for use in f(X, params) like function calls
+    #     """
+    #     pass
 
     def fit_data(
         self,

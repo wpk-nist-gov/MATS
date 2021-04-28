@@ -8,7 +8,7 @@ import pandas as pd
 from ..hapi import ISO
 
 # from .Utilities import *
-from .Utilities import isotope_list_molecules_isotopes
+from .utilities import isotope_list_molecules_isotopes
 
 
 class Dataset:
@@ -70,7 +70,7 @@ class Dataset:
             if molecules_in_paramlist[i] not in dataset_molecule_list:
                 dataset_molecule_list.append(molecules_in_paramlist[i])
         for spectrum in self.spectra:
-            spectrum_molefraction_dictionary = spectrum.get_molefraction()
+            spectrum_molefraction_dictionary = spectrum.molefraction
             for molecule in dataset_molecule_list:
                 if molecule not in spectrum_molefraction_dictionary:
                     spectrum_molefraction_dictionary[molecule] = 0
@@ -328,7 +328,7 @@ class Dataset:
 
     def get_spectra_extremes(self):
         for spectrum in self.spectra:
-            if spectrum.get_spectrum_number() == 1:
+            if spectrum.spectrum_number == 1:
                 wave_min = np.min(spectrum.wavenumber)
                 wave_max = np.max(spectrum.wavenumber)
             else:
@@ -353,7 +353,7 @@ class Dataset:
 
         extreme_dictionary = {}
         for spectrum in self.spectra:
-            extreme_dictionary[spectrum.get_spectrum_number()] = [
+            extreme_dictionary[spectrum.spectrum_number] = [
                 np.min(spectrum.wavenumber),
                 np.max(spectrum.wavenumber),
             ]
@@ -531,7 +531,7 @@ class Dataset:
 
         summary_file = pd.DataFrame()
         for spectrum in self.spectra:
-            spectrum_data = spectrum.save_spectrum_info(save_file=False)
+            spectrum_data = spectrum.save_spectrum_info(save_file=None)
             summary_file = summary_file.append(spectrum_data)
         if save_file:
             summary_file.to_csv(self.dataset_name + ".csv", index=False)
@@ -557,7 +557,7 @@ class Dataset:
                 spectrum.wavenumber,
                 spectrum.alpha,
                 plot_color + ".",
-                label=spectrum.filename,
+                label=spectrum.spectrum_name,
             )
             ax1.plot(spectrum.wavenumber, spectrum.residuals, plot_color + "-")
         ax0.legend(bbox_to_anchor=(1, 1))
